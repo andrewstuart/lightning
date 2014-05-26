@@ -2,6 +2,7 @@ package lightning
 
 import (
   "net/http"
+  "fmt"
   "time"
   "io/ioutil"
   "encoding/json"
@@ -9,6 +10,13 @@ import (
 
 const API_ROOT = "https://api.spark.io/v1/"
 const API_DEVICES = "devices/"
+
+//TODO Make this an interface. For http, serial, local tcp, etc...
+// type CoreTalker interface {
+//   func Fn (string, ...string) (string, error)
+//   func Var (string) (string, error)
+//   func Event (string) (chan string, error)
+// }
 
 type Core struct {
   Id string `json:"id"`
@@ -21,35 +29,34 @@ type Core struct {
   Variables map[string]string `json:"variables"`
 }
 
-var client = &http.Client{}
+var client = new(http.Client)
 
-func (c *Core) do (req *http.Request) (*http.Response, error) {
+func (c Core) do (req *http.Request) (*http.Response, error) {
   req.Header.Add("Authorization", "Bearer " + c.key)
 
   return client.Do(req)
 }
 
-type fnArgs struct {
-  Args []string `json:"args,omitempty"`
+type strArgs struct {
+  str string
 }
 
-func (f fnArgs) Write(b []byte) (int, error) {
-  if s, err := json.Marshal(f); err == nil {
-     b = append(b, s...)
-     return len(b), nil
-  } else {
-    return 0, err
-  }
+func (s strArgs) Write(b []byte) (int, error) {
+  b = append(b, []byte(s.str)...)
+
+  return len(b), nil
 }
 
 //Fn takes the name of the function to run and as many arguments as needed and will pass those arguments to the function
-func (c *Core) Fn (fname string, fargs ...string) (string, error) {
+func (c *Core) Fn (fname, fargs string) (string, error) {
   req, err1 := http.NewRequest("POST", API_ROOT + API_DEVICES + c.Id + "/" + fname, nil)
   if err1 != nil {
     return "", err1
   }
 
-  args := fnArgs{fargs}
+  fmt.Println(req)
+
+  args := strArgs{fargs}
 
   err0 := req.Write(args)
   if err0 != nil {
