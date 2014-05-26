@@ -4,12 +4,13 @@ import (
   "net/http"
   "os"
   "log"
-  "date"
-  "io"
+  "fmt"
+  "time"
+  "encoding/json"
 )
 
-const root = "https://api.spark.io/v1/"
-const devices = "devices/"
+const API_ROOT = "https://api.spark.io/v1/"
+const API_DEVICES = "devices/"
 
 type Variable struct {
   Name string `json:"name"`
@@ -20,17 +21,17 @@ type Core struct {
   Id string `json:"id"`
   key string
   Name string `json:"name"`
-  LastApp string `json:"lastApp"`
-  LastHeard date.Date `json:"lastHeard"`
+  LastApp string `json:"last_app"`
+  LastHeard time.Time `json:"last_heard"`
   Connected bool
   Functions [4]string `json:"functions"`
-  Variables []Variable `json:"variables"`
+  Variables map[string]string `json:"variables"`
 }
 
 var client = &http.Client{}
 
 func NewCore(id, key string) (Core, error) {
-  req, err := http.NewRequest("GET", root + devices + id, nil)
+  req, err := http.NewRequest("GET", API_ROOT + API_DEVICES + id, nil)
 
   if err != nil {
     log.Fatal(err)
@@ -43,9 +44,20 @@ func NewCore(id, key string) (Core, error) {
     log.Fatal(err)
   }
 
-  io.Copy(os.Stdout, resp.Body)
+  c := Core{
+    Id: id,
+    key: key,
+  }
 
-  return Core{id, key}, nil
+  dec := json.NewDecoder(resp.Body)
+  dec.Decode(&c)
+
+  fmt.Println(c.LastHeard == time.Time{})
+
+  enc := json.NewEncoder(os.Stdout)
+  enc.Encode(c)
+
+  return c, nil
 }
 
 type Collection struct {
