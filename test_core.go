@@ -1,11 +1,11 @@
 package lightning
 
 import (
-  "testing"
+	"testing"
 )
 
-func TestNewCollection (t *testing.T) {
-  if c, err := NewCollection("1234"); err != nil {
-    t.Error("Collections are broke.")
-  }
+func TestNewCollection(t *testing.T) {
+	if _, err := NewCollection("1234"); err != nil {
+		t.Error("Collections are broke.")
+	}
 }
