@@ -3,6 +3,7 @@ package lightning
 import (
   "net/http"
   "time"
+  "os"
   "io/ioutil"
   "encoding/json"
 )
@@ -25,6 +26,7 @@ var client = &http.Client{}
 
 func (c *Core) do (req *http.Request) (*http.Response, error) {
   req.Header.Add("Authorization", "Bearer " + c.key)
+  req.Header.Add("Content-Type", "application/json")
 
   return client.Do(req)
 }
@@ -33,31 +35,29 @@ type fnArgs struct {
   Args []string `json:"args,omitempty"`
 }
 
-func (f fnArgs) Write(b []byte) (int, error) {
-  if s, err := json.Marshal(f); err == nil {
-     b = append(b, s...)
-     return len(b), nil
+func (f fnArgs) Read(b []byte) (l int, e error) {
+  if j, err := json.Marshal(f); err == nil {
+    lj := len(j)
+    l = copy(b, j[:lj])
+    return
   } else {
-    return 0, err
+    e = err
+    return
   }
 }
 
 //Fn takes the name of the function to run and as many arguments as needed and will pass those arguments to the function
 func (c *Core) Fn (fname string, fargs ...string) (string, error) {
-  req, err1 := http.NewRequest("POST", API_ROOT + API_DEVICES + c.Id + "/" + fname, nil)
+  args := fnArgs{fargs}
+
+  req, err1 := http.NewRequest("POST", API_ROOT + API_DEVICES + c.Id + "/" + fname, args)
   if err1 != nil {
     return "", err1
   }
 
-  args := fnArgs{fargs}
-
-  err0 := req.Write(args)
-  if err0 != nil {
-    return "", err0
-  }
+  req.Write(os.Stdout)
 
   resp, err2 := c.do(req)
-
   if err2 != nil {
     return "", err2
   }
