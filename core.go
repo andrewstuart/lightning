@@ -14,10 +14,10 @@ const API_DEVICES = "devices/"
 type Core struct {
 	Id        string `json:"id"`
 	key       string
-	Name      string    `json:"name"`
-	LastApp   string    `json:"last_app"`
-	LastHeard time.Time `json:"last_heard"`
-	Connected bool
+	Name      string            `json:"name"`
+	LastApp   string            `json:"last_app"`
+	LastHeard time.Time         `json:"last_heard"`
+	Connected bool              `json:"connected"`
 	Functions [4]string         `json:"functions"`
 	Variables map[string]string `json:"variables"`
 }

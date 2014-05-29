@@ -15,6 +15,10 @@ variable, err := myCore.Var("variableName")
 fnResult, err := myCore.Fn("functionname", "functionParam") //(Any type for param. will be run through ftm.Sprint())
 //Handle err
 
+myCore.On("eventName", func HandleEvent(s string) {
+  //Handle event
+});
+
 eventChan, err := myCore.Evt("eventName")
 //Handle err
 
