@@ -1,3 +1,4 @@
+//A library for interfacing with the Spark cloud api
 package lightning
 
 import (
