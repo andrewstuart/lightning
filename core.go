@@ -3,9 +3,8 @@ package lightning
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 )
 
@@ -13,14 +12,14 @@ const API_ROOT = "https://api.spark.io/v1/"
 const API_DEVICES = "devices/"
 
 type Core struct {
-	Id        string `json:"id"`
-	key       string
+	Id        string            `json:"id"`
 	Name      string            `json:"name"`
 	LastApp   string            `json:"last_app"`
 	LastHeard time.Time         `json:"last_heard"`
 	Connected bool              `json:"connected"`
 	Functions [4]string         `json:"functions"`
 	Variables map[string]string `json:"variables"`
+	key       string
 }
 
 var client = &http.Client{}
@@ -32,50 +31,41 @@ func (c *Core) do(req *http.Request) (*http.Response, error) {
 	return client.Do(req)
 }
 
-type fnArgs struct {
-	Args []string `json:"args,omitempty"`
-}
-
-func (f fnArgs) Read(b []byte) (l int, e error) {
-	if j, err := json.Marshal(f); err == nil {
-		lj := len(j)
-		l = copy(b, j[:lj])
-		return
-	} else {
-		e = err
-		return
-	}
+//fnResponse is the internal type for decoding the response
+type fnResponse struct {
+	ReturnValue interface{} `json:"return_value"`
 }
 
 //Fn takes the name of the function to run and as many arguments as needed and will pass those arguments to the function
-func (c *Core) Fn(fname string, fargs ...string) (string, error) {
-	args := fnArgs{fargs}
+func (c *Core) Fn(fname string, fargs ...string) (interface{}, error) {
+
+	s := "[\"" + strings.Join(fargs, "\",\"") + "\"]"
+
+	args := strings.NewReader(s)
 
 	req, err1 := http.NewRequest("POST", API_ROOT+API_DEVICES+c.Id+"/"+fname, args)
 	if err1 != nil {
 		return "", err1
 	}
 
-	req.Write(os.Stdout)
-
 	resp, err2 := c.do(req)
 	if err2 != nil {
 		return "", err2
 	}
 
-	if str, err := ioutil.ReadAll(resp.Body); err != nil {
-		return "", err
-	} else {
-		return string(str), nil
-	}
+	dec := json.NewDecoder(resp.Body)
+	var r fnResponse
+
+	err := dec.Decode(&r)
+	return r.ReturnValue, err
 }
 
 func NewCore(id, key string) (Core, error) {
-	req, err1 := http.NewRequest("GET", API_ROOT+API_DEVICES+id, nil)
+	req, err := http.NewRequest("GET", API_ROOT+API_DEVICES+id, nil)
 
 	//TODO: Abstract errors
-	if err1 != nil {
-		return Core{}, err1
+	if err != nil {
+		return Core{}, err
 	}
 
 	c := Core{
@@ -83,10 +73,10 @@ func NewCore(id, key string) (Core, error) {
 		key: key,
 	}
 
-	resp, err2 := c.do(req)
+	resp, reqErr := c.do(req)
 
-	if err2 != nil {
-		return Core{}, err2
+	if reqErr != nil {
+		return Core{}, reqErr
 	}
 
 	dec := json.NewDecoder(resp.Body)
